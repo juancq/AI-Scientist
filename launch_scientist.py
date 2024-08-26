@@ -55,6 +55,7 @@ def parse_arguments():
         choices=[
             "claude-3-5-sonnet-20240620",
             "gpt-4o-2024-05-13",
+            "gpt-4o-2024-08-06",
             "deepseek-coder-v2-0724",
             "llama3.1-405b",
             # Anthropic Claude models via Amazon Bedrock
@@ -342,7 +343,7 @@ if __name__ == "__main__":
 
         print(f"Using Vertex AI with model {client_model}.")
         client = anthropic.AnthropicVertex()
-    elif args.model == "gpt-4o-2024-05-13":
+    elif args.model.startswith("gpt"):
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")
