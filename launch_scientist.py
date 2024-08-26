@@ -36,6 +36,11 @@ def parse_arguments():
         action="store_true",
         help="Skip novelty check and use existing ideas",
     )
+    parser.add_argument(
+        "--ideation-only",
+        action="store_true",
+        help="Idea generation and novelty check only",
+    )
     # add type of experiment (nanoGPT, Boston, etc.)
     parser.add_argument(
         "--experiment",
@@ -382,6 +387,10 @@ if __name__ == "__main__":
 
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)
+
+    if args.ideation_only:
+        print("Ideas generated.")
+        sys.exit(0)
 
     novel_ideas = [idea for idea in ideas if idea["novel"]]
     # novel_ideas = list(reversed(novel_ideas))
