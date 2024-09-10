@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import os.path as osp
 import time
 from typing import List, Dict, Union
@@ -7,13 +8,14 @@ from ai_scientist.llm import get_response_from_llm, extract_json_between_markers
 
 import requests
 import backoff
+from ai_scientist import config
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
 idea_first_prompt = """{task_description}
-<experiment.py>
+<{experiment_file}>
 {code}
-</experiment.py>
+</{experiment_file}>
 
 Here are the ideas that you have already generated:
 
@@ -70,6 +72,9 @@ NEW IDEA JSON:
 If there is nothing to improve, simply repeat the previous JSON EXACTLY after the thought and include "I am done" at the end of the thoughts but before the JSON.
 ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
 
+def save_ideas(ideas, base_dir):
+    with open(osp.join(base_dir, "ideas.json"), "w") as f:
+        json.dump(ideas, f)
 
 # GENERATE IDEAS
 def generate_ideas(
@@ -95,12 +100,12 @@ def generate_ideas(
             print("Error decoding existing ideas. Generating new ideas.")
 
     idea_str_archive = []
-    with open(osp.join(base_dir, "seed_ideas.json"), "r") as f:
-        seed_ideas = json.load(f)
-    for seed_idea in seed_ideas:
-        idea_str_archive.append(json.dumps(seed_idea))
+    if osp.exists(osp.join(base_dir, "seed_ideas.json")):
+        with open(osp.join(base_dir, "seed_ideas.json"), "r") as f:
+            seed_ideas = json.load(f)
+        idea_str_archive = [json.dumps(seed_idea) for seed_idea in seed_ideas]
 
-    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+    with open(osp.join(base_dir, config.experiment_file), "r") as f:
         code = f.read()
 
     with open(osp.join(base_dir, "prompt.json"), "r") as f:
@@ -108,67 +113,72 @@ def generate_ideas(
 
     idea_system_prompt = prompt["system"]
 
-    for _ in range(max_num_generations):
-        print()
-        print(f"Generating idea {_ + 1}/{max_num_generations}")
-        try:
-            prev_ideas_string = "\n\n".join(idea_str_archive)
+    try: 
+        for _ in range(max_num_generations):
+            print()
+            print(f"Generating idea {_ + 1}/{max_num_generations}")
+            try:
+                prev_ideas_string = "\n\n".join(idea_str_archive)
 
-            msg_history = []
-            print(f"Iteration 1/{num_reflections}")
-            text, msg_history = get_response_from_llm(
-                idea_first_prompt.format(
-                    task_description=prompt["task_description"],
-                    code=code,
-                    prev_ideas_string=prev_ideas_string,
-                    num_reflections=num_reflections,
-                ),
-                client=client,
-                model=model,
-                system_message=idea_system_prompt,
-                msg_history=msg_history,
-            )
-            ## PARSE OUTPUT
-            json_output = extract_json_between_markers(text)
-            assert json_output is not None, "Failed to extract JSON from LLM output"
-            print(json_output)
+                msg_history = []
+                print(f"Iteration 1/{num_reflections}")
+                text, msg_history = get_response_from_llm(
+                    idea_first_prompt.format(
+                        task_description=prompt["task_description"],
+                        code=code,
+                        prev_ideas_string=prev_ideas_string,
+                        num_reflections=num_reflections,
+                        experiment_file=config.experiment_file,
+                    ),
+                    client=client,
+                    model=model,
+                    system_message=idea_system_prompt,
+                    msg_history=msg_history,
+                )
+                ## PARSE OUTPUT
+                json_output = extract_json_between_markers(text)
+                assert json_output is not None, "Failed to extract JSON from LLM output"
+                print(json_output)
 
-            # Iteratively improve task.
-            if num_reflections > 1:
-                for j in range(num_reflections - 1):
-                    print(f"Iteration {j + 2}/{num_reflections}")
-                    text, msg_history = get_response_from_llm(
-                        idea_reflection_prompt.format(
-                            current_round=j + 2, num_reflections=num_reflections
-                        ),
-                        client=client,
-                        model=model,
-                        system_message=idea_system_prompt,
-                        msg_history=msg_history,
-                    )
-                    ## PARSE OUTPUT
-                    json_output = extract_json_between_markers(text)
-                    assert (
-                        json_output is not None
-                    ), "Failed to extract JSON from LLM output"
-                    print(json_output)
+                # Iteratively improve task.
+                if num_reflections > 1:
+                    for j in range(num_reflections - 1):
+                        print(f"Iteration {j + 2}/{num_reflections}")
+                        text, msg_history = get_response_from_llm(
+                            idea_reflection_prompt.format(
+                                current_round=j + 2, num_reflections=num_reflections
+                            ),
+                            client=client,
+                            model=model,
+                            system_message=idea_system_prompt,
+                            msg_history=msg_history,
+                        )
+                        ## PARSE OUTPUT
+                        json_output = extract_json_between_markers(text)
+                        assert (
+                            json_output is not None
+                        ), "Failed to extract JSON from LLM output"
+                        print(json_output)
 
-                    if "I am done" in text:
-                        print(f"Idea generation converged after {j + 2} iterations.")
-                        break
+                        if "I am done" in text:
+                            print(f"Idea generation converged after {j + 2} iterations.")
+                            break
 
-            idea_str_archive.append(json.dumps(json_output))
-        except Exception as e:
-            print(f"Failed to generate idea: {e}")
-            continue
+                idea_str_archive.append(json.dumps(json_output))
+            except Exception as e:
+                print(f"Failed to generate idea: {e}")
+                continue
+
+    except KeyboardInterrupt:
+        print(f"Keyboard interrupt detected. Saving current ideas to file")
+        ## SAVE IDEAS
+        ideas = [json.loads(idea_str) for idea_str in idea_str_archive]
+        save_ideas(ideas, base_dir)
+        sys.exit(1)
 
     ## SAVE IDEAS
-    ideas = []
-    for idea_str in idea_str_archive:
-        ideas.append(json.loads(idea_str))
-
-    with open(osp.join(base_dir, "ideas.json"), "w") as f:
-        json.dump(ideas, f, indent=4)
+    ideas = [json.loads(idea_str) for idea_str in idea_str_archive]
+    save_ideas(ideas, base_dir)
 
     return ideas
 
@@ -195,7 +205,7 @@ def generate_next_idea(
         for seed_idea in seed_ideas[:1]:
             idea_archive.append(seed_idea)
     else:
-        with open(osp.join(base_dir, "experiment.py"), "r") as f:
+        with open(osp.join(base_dir, config.experiment_file), "r") as f:
             code = f.read()
         with open(osp.join(base_dir, "prompt.json"), "r") as f:
             prompt = json.load(f)
@@ -216,6 +226,7 @@ def generate_next_idea(
                         code=code,
                         prev_ideas_string=prev_ideas_string,
                         num_reflections=num_reflections,
+                        experiment_file=config.experiment_file,
                     )
                     + """
 Completed ideas have an additional "Score" field which indicates the assessment by an expert ML reviewer.
@@ -320,9 +331,9 @@ Decide a paper idea is novel if after sufficient searching, you have not found a
 Decide a paper idea is not novel, if you have found a paper that significantly overlaps with your idea.
 
 {task_description}
-<experiment.py>
+<{experiment_file}>
 {code}
-</experiment.py>
+</{experiment_file}>
 """
 
 novelty_prompt = '''Round {current_round}/{num_rounds}.
@@ -364,7 +375,7 @@ def check_idea_novelty(
     model,
     max_num_iterations=10,
 ):
-    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+    with open(osp.join(base_dir, config.experiment_file), "r") as f:
         code = f.read()
     with open(osp.join(base_dir, "prompt.json"), "r") as f:
         prompt = json.load(f)
@@ -396,6 +407,7 @@ def check_idea_novelty(
                         num_rounds=max_num_iterations,
                         task_description=task_description,
                         code=code,
+                        experiment_file=config.experiment_file,
                     ),
                     msg_history=msg_history,
                 )
@@ -456,19 +468,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment",
         type=str,
-        default="nanoGPT",
+        default=None,
         help="Experiment to run AI Scientist on.",
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt-4o-2024-05-13",
-        choices=[
-            "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
-            "deepseek-coder-v2-0724",
-            "llama3.1-405b",
-        ],
+        default=config.default_model,
+        choices=config.model_choices,
         help="Model to use for AI Scientist.",
     )
     parser.add_argument(
@@ -481,7 +488,23 @@ if __name__ == "__main__":
         action="store_true",
         help="Check novelty of ideas.",
     )
+    parser.add_argument(
+        "--num-ideas",
+        type=int,
+        default=MAX_NUM_GENERATIONS,
+        help="Number of ideas to generate",
+    )
+    parser.add_argument(
+        "--num-reflections",
+        type=int,
+        default=NUM_REFLECTIONS,
+        help="Number of reflections per idea",
+    )
     args = parser.parse_args()
+
+    if args.experiment is None:
+        print("Please specify an experiment.")
+        sys.exit(0)
 
     # Create client
     if args.model == "claude-3-5-sonnet-20240620":
@@ -506,11 +529,11 @@ if __name__ == "__main__":
 
         print(f"Using Vertex AI with model {client_model}.")
         client = anthropic.AnthropicVertex()
-    elif args.model == "gpt-4o-2024-05-13":
+    elif args.model.startswith("gpt-4o"):
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")
-        client_model = "gpt-4o-2024-05-13"
+        client_model = args.model
         client = openai.OpenAI()
     elif args.model == "deepseek-coder-v2-0724":
         import openai
@@ -539,8 +562,8 @@ if __name__ == "__main__":
         client=client,
         model=client_model,
         skip_generation=args.skip_idea_generation,
-        max_num_generations=MAX_NUM_GENERATIONS,
-        num_reflections=NUM_REFLECTIONS,
+        max_num_generations=args.num_ideas,
+        num_reflections=args.num_reflections,
     )
     if args.check_novelty:
         ideas = check_idea_novelty(
