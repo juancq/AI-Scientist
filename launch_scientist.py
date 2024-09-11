@@ -377,7 +377,12 @@ if __name__ == "__main__":
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
 
-    if not args.execute_ideas:
+    if args.execute_ideas:
+        # read ideas from ideas.json
+        with open(osp.join(base_dir, "ideas.json"), "r") as f:
+            ideas = json.load(f)
+        novel_ideas = [idea for idea in ideas if idea["novel"]]
+    else:
         ideas = generate_ideas(
             base_dir,
             client=client,
@@ -398,9 +403,9 @@ if __name__ == "__main__":
 
         novel_ideas = [idea for idea in ideas if idea["novel"]]
 
-    if args.ideation_only:
-        print("Ideas generated.")
-        sys.exit(0)
+        if args.ideation_only:
+            print("Ideas generated.")
+            sys.exit(0)
 
     # novel_ideas = list(reversed(novel_ideas))
 
