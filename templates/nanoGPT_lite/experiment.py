@@ -383,8 +383,10 @@ def train(dataset="shakespeare_char", out_dir="run_0", seed_offset=0):
     )
 
     # poor man's data loader
-    data_dir = os.path.join("../../data", dataset)
-    # data_dir = os.path.join("../../../data", dataset)
+    if out_dir == "run_0":
+        data_dir = os.path.join("../../data", dataset)
+    else:
+        data_dir = os.path.join("../../../data", dataset)
 
     def get_batch(split):
         # We recreate np.memmap every batch to avoid a memory leak, as per
@@ -681,7 +683,7 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     num_seeds = {
-        "shakespeare_char": 1,
+        "shakespeare_char": 2,
     }
 
     out_dir = args.out_dir

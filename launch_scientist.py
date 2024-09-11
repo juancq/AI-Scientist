@@ -36,6 +36,11 @@ def parse_arguments():
         action="store_true",
         help="Skip novelty check and use existing ideas",
     )
+    parser.add_argument(
+        "--ideation-only",
+        action="store_true",
+        help="Idea generation and novelty check only",
+    )
     # add type of experiment (nanoGPT, Boston, etc.)
     parser.add_argument(
         "--experiment",
@@ -50,6 +55,7 @@ def parse_arguments():
         choices=[
             "claude-3-5-sonnet-20240620",
             "gpt-4o-2024-05-13",
+            "gpt-4o-2024-08-06",
             "deepseek-coder-v2-0724",
             "llama3.1-405b",
             # Anthropic Claude models via Amazon Bedrock
@@ -337,7 +343,7 @@ if __name__ == "__main__":
 
         print(f"Using Vertex AI with model {client_model}.")
         client = anthropic.AnthropicVertex()
-    elif args.model == "gpt-4o-2024-05-13":
+    elif args.model.startswith("gpt"):
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")
@@ -382,6 +388,10 @@ if __name__ == "__main__":
 
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
         json.dump(ideas, f, indent=4)
+
+    if args.ideation_only:
+        print("Ideas generated.")
+        sys.exit(0)
 
     novel_ideas = [idea for idea in ideas if idea["novel"]]
     # novel_ideas = list(reversed(novel_ideas))
