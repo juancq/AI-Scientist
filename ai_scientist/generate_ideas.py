@@ -12,65 +12,6 @@ from ai_scientist import config
 
 S2_API_KEY = os.getenv("S2_API_KEY")
 
-idea_first_prompt = """{task_description}
-<{experiment_file}>
-{code}
-</{experiment_file}>
-
-Here are the ideas that you have already generated:
-
-'''
-{prev_ideas_string}
-'''
-
-Come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided.
-Note that you will not have access to any additional resources or datasets.
-Make sure any idea is not overfit the specific training dataset or model, and has wider significance.
-
-Respond in the following format:
-
-THOUGHT:
-<THOUGHT>
-
-NEW IDEA JSON:
-```json
-<JSON>
-```
-
-In <THOUGHT>, first briefly discuss your intuitions and motivations for the idea. Detail your high-level plan, necessary design choices and ideal outcomes of the experiments. Justify how the idea is different from the existing ones.
-
-In <JSON>, provide the new idea in JSON format with the following fields:
-- "Name": A shortened descriptor of the idea. Lowercase, no spaces, underscores allowed.
-- "Title": A title for the idea, will be used for the report writing.
-- "Experiment": An outline of the implementation. E.g. which functions need to be added or modified, how results will be obtained, ...
-- "Interestingness": A rating from 1 to 10 (lowest to highest).
-- "Feasibility": A rating from 1 to 10 (lowest to highest).
-- "Novelty": A rating from 1 to 10 (lowest to highest).
-
-Be cautious and realistic on your ratings.
-This JSON will be automatically parsed, so ensure the format is precise.
-You will have {num_reflections} rounds to iterate on the idea, but do not need to use them all.
-"""
-
-idea_reflection_prompt = """Round {current_round}/{num_reflections}.
-In your thoughts, first carefully consider the quality, novelty, and feasibility of the idea you just created.
-Include any other factors that you think are important in evaluating the idea.
-Ensure the idea is clear and concise, and the JSON is the correct format.
-Do not make things overly complicated.
-In the next attempt, try and refine and improve your idea.
-Stick to the spirit of the original idea unless there are glaring issues.
-
-Respond in the same format as before:
-THOUGHT:
-<THOUGHT>
-
-NEW IDEA JSON:
-```json
-<JSON>
-```
-
-If there is nothing to improve, simply repeat the previous JSON EXACTLY after the thought and include "I am done" at the end of the thoughts but before the JSON.
-ONLY INCLUDE "I am done" IF YOU ARE MAKING NO MORE CHANGES."""
 
 def save_ideas(ideas, base_dir):
     with open(osp.join(base_dir, "ideas.json"), "w") as f:
@@ -123,7 +64,7 @@ def generate_ideas(
                 msg_history = []
                 print(f"Iteration 1/{num_reflections}")
                 text, msg_history = get_response_from_llm(
-                    idea_first_prompt.format(
+                    config.idea_first_prompt.format(
                         task_description=prompt["task_description"],
                         code=code,
                         prev_ideas_string=prev_ideas_string,
@@ -145,7 +86,7 @@ def generate_ideas(
                     for j in range(num_reflections - 1):
                         print(f"Iteration {j + 2}/{num_reflections}")
                         text, msg_history = get_response_from_llm(
-                            idea_reflection_prompt.format(
+                            config.idea_reflection_prompt.format(
                                 current_round=j + 2, num_reflections=num_reflections
                             ),
                             client=client,
@@ -221,7 +162,7 @@ def generate_next_idea(
                 msg_history = []
                 print(f"Iteration 1/{num_reflections}")
                 text, msg_history = get_response_from_llm(
-                    idea_first_prompt.format(
+                    config.idea_first_prompt.format(
                         task_description=prompt["task_description"],
                         code=code,
                         prev_ideas_string=prev_ideas_string,
@@ -248,7 +189,7 @@ Scores of 0 indicate the idea failed either during experimentation, writeup or r
                     for j in range(num_reflections - 1):
                         print(f"Iteration {j + 2}/{num_reflections}")
                         text, msg_history = get_response_from_llm(
-                            idea_reflection_prompt.format(
+                            config.idea_reflection_prompt.format(
                                 current_round=j + 2, num_reflections=num_reflections
                             ),
                             client=client,
@@ -319,55 +260,6 @@ def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
     return papers
 
 
-novelty_system_msg = """You are an ambitious AI PhD student who is looking to publish a paper that will contribute significantly to the field.
-You have an idea and you want to check if it is novel or not. I.e., not overlapping significantly with existing literature or already well explored.
-Be a harsh critic for novelty, ensure there is a sufficient contribution in the idea for a new conference or workshop paper.
-You will be given access to the Semantic Scholar API, which you may use to survey the literature and find relevant papers to help you make your decision.
-The top 10 results for any search query will be presented to you with the abstracts.
-
-You will be given {num_rounds} to decide on the paper, but you do not need to use them all.
-At any round, you may exit early and decide on the novelty of the idea.
-Decide a paper idea is novel if after sufficient searching, you have not found a paper that significantly overlaps with your idea.
-Decide a paper idea is not novel, if you have found a paper that significantly overlaps with your idea.
-
-{task_description}
-<{experiment_file}>
-{code}
-</{experiment_file}>
-"""
-
-novelty_prompt = '''Round {current_round}/{num_rounds}.
-You have this idea:
-
-"""
-{idea}
-"""
-
-The results of the last query are (empty on first round):
-"""
-{last_query_results}
-"""
-
-Respond in the following format:
-
-THOUGHT:
-<THOUGHT>
-
-RESPONSE:
-```json
-<JSON>
-```
-
-In <THOUGHT>, first briefly reason over the idea and identify any query that could help you make your decision.
-If you have made your decision, add "Decision made: novel." or "Decision made: not novel." to your thoughts.
-
-In <JSON>, respond in JSON format with ONLY the following field:
-- "Query": An optional search query to search the literature (e.g. attention is all you need). You must make a query if you have not decided this round.
-
-A query will work best if you are able to recall the exact name of the paper you are looking for, or the authors.
-This JSON will be automatically parsed, so ensure the format is precise.'''
-
-
 def check_idea_novelty(
     ideas,
     base_dir,
@@ -395,7 +287,7 @@ def check_idea_novelty(
         for j in range(max_num_iterations):
             try:
                 text, msg_history = get_response_from_llm(
-                    novelty_prompt.format(
+                    config.novelty_prompt.format(
                         current_round=j + 1,
                         num_rounds=max_num_iterations,
                         idea=idea,
@@ -403,7 +295,7 @@ def check_idea_novelty(
                     ),
                     client=client,
                     model=model,
-                    system_message=novelty_system_msg.format(
+                    system_message=config.novelty_system_msg.format(
                         num_rounds=max_num_iterations,
                         task_description=task_description,
                         code=code,
@@ -459,8 +351,8 @@ def check_idea_novelty(
 
 
 if __name__ == "__main__":
-    MAX_NUM_GENERATIONS = 32
-    NUM_REFLECTIONS = 5
+    MAX_NUM_GENERATIONS = config.num_ideas
+    NUM_REFLECTIONS = config.num_reflections
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate AI scientist ideas")
