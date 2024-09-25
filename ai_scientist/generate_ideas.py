@@ -52,6 +52,11 @@ def generate_ideas(
     with open(osp.join(base_dir, "prompt.json"), "r") as f:
         prompt = json.load(f)
 
+    data_description = ""
+    if osp.exists(osp.join(base_dir, "data_notes.txt")):
+        with open(osp.join(base_dir, "data_notes.txt"), "r") as f:
+            data_description = "<data_description>" + f.read() + "</data_description>"
+
     idea_system_prompt = prompt["system"]
 
     try: 
@@ -66,6 +71,7 @@ def generate_ideas(
                 text, msg_history = get_response_from_llm(
                     config.idea_first_prompt.format(
                         task_description=prompt["task_description"],
+                        data_description=data_description,
                         code=code,
                         prev_ideas_string=prev_ideas_string,
                         num_reflections=num_reflections,
@@ -273,6 +279,12 @@ def check_idea_novelty(
         prompt = json.load(f)
         task_description = prompt["task_description"]
 
+    data_description = ""
+    if osp.exists(osp.join(base_dir, "data_notes.txt")):
+        with open(osp.join(base_dir, "data_notes.txt"), "r") as f:
+            data_description = "<data_description>" + f.read() + "</data_description>"
+
+
     for idx, idea in enumerate(ideas):
         if "novel" in idea:
             print(f"Skipping idea {idx}, already checked.")
@@ -298,6 +310,7 @@ def check_idea_novelty(
                     system_message=config.novelty_system_msg.format(
                         num_rounds=max_num_iterations,
                         task_description=task_description,
+                        data_description=data_description,
                         code=code,
                         experiment_file=config.experiment_file,
                     ),

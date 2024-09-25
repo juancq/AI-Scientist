@@ -15,6 +15,8 @@ idea_first_prompt = """{task_description}
 {code}
 </{experiment_file}>
 
+{data_description}
+
 Here are the ideas that you have already generated:
 
 '''
