@@ -42,8 +42,7 @@ with open('fitted_cox_model.pkl', 'wb') as f:
 results = cph.summary
 results = results[['coef', 'exp(coef)', 'se(coef)', 'p', 'coef lower 95%', 'coef upper 95%']]
 results = json.loads(cph.summary.to_json())
-# Calculate and save concordance index
-results['concordance'] = cph.concordance_index_
+
 out_dir = args.out_dir
 Path(out_dir).mkdir(parents=True, exist_ok=True)
 with open(f'{out_dir}/final_info.json', "w") as f:
