@@ -87,6 +87,7 @@ Decide a paper idea is not novel, if you have found a paper that significantly o
 <{experiment_file}>
 {code}
 </{experiment_file}>
+{data_description}
 """
 
 novelty_prompt = '''Round {current_round}/{num_rounds}.
