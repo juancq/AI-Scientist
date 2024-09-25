@@ -13,11 +13,11 @@ coder_prompt = """Your goal is to implement the following idea: {title}.
 The proposed experiment is as follows: {idea}.
 You are given a total of up to {max_runs} runs to complete the necessary experiments. You do not need to use all {max_runs}.
 
-First, plan the list of experiments you would like to run. For example, if you are sweeping over a specific hyperparameter, plan each value you would like to test for each run.
+First, plan the list of experiments you would like to run. For example, if you are exploring the association between multiple risk factors and a health outcome, plan which covariates you would include in each model, and decide if you will stratify by certain variables or adjust for potential confounders in each analysis.
 
-Note that we already provide the vanilla baseline results, so you do not need to re-run it.
+Note that we already provide initial results, so you do not need to re-run it.
 
-For reference, the baseline results are as follows:
+For reference, the initial results are as follows:
 
 {baseline_results}
 
@@ -145,10 +145,6 @@ def perform_experiments(idea, folder_name, coder, baseline_results) -> bool:
     current_iter = 0
     next_prompt = """
 Great job! Please modify `plot.py` to generate the most relevant plots for the final writeup. 
-
-In particular, be sure to fill in the "labels" dictionary with the correct names for each run that you want to plot.
-
-Only the runs in the `labels` dictionary will be plotted, so make sure to include all relevant runs.
 
 We will be running the command `python plot.py` to generate the plots.
 """
