@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-from lifelines import CoxPHFitter
 import matplotlib.pyplot as plt
 import pickle
 
@@ -42,10 +40,3 @@ cph.plot_partial_effects_on_outcome('age', [median_age - 10, median_age, median_
 plt.title("Survival Curves for Different Age Groups")
 plt.savefig('survival_curves_age.png')
 plt.close()
-
-print("Plots saved as:")
-print("- partial_effect_age.png")
-print("- partial_effect_sex.png")
-print("- hazard_ratios.png")
-print("- survival_curves_age.png")
-# You can add more plots or analyses here as needed
