@@ -23,7 +23,7 @@ Here are the ideas that you have already generated:
 
 Come up with the next impactful and creative idea for research experiments and directions you can feasibly investigate with the code provided.
 Note that you will not have access to any additional resources or datasets.
-Make sure any idea is not overfit the specific training dataset or model, and has wider epidemiological and clinical significance.
+Make sure any idea has wide epidemiological and clinical significance for population health.
 
 Respond in the following format:
 
