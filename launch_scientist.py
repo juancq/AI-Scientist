@@ -171,6 +171,11 @@ def do_idea(
     #baseline_results = {k: v["means"] for k, v in baseline_results.items()}
     exp_file = osp.join(folder_name, "experiment.py")
     vis_file = osp.join(folder_name, "plot.py")
+
+    read_only_fnames = None
+    if osp.exists(osp.join(base_dir, "data_notes.txt")):
+        read_only_fnames = [osp.join(folder_name, "data_notes.txt")]
+
     notes = osp.join(folder_name, "notes.txt")
     with open(notes, "w") as f:
         f.write(f"# Title: {idea['Title']}\n")
@@ -202,6 +207,7 @@ def do_idea(
         coder = Coder.create(
             main_model=main_model,
             fnames=fnames,
+            read_only_fnames=read_only_fnames,
             io=io,
             stream=False,
             use_git=False,
