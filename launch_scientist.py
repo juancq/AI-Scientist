@@ -173,7 +173,7 @@ def do_idea(
     vis_file = osp.join(folder_name, "plot.py")
 
     read_only_fnames = None
-    if osp.exists(osp.join(base_dir, "data_notes.txt")):
+    if osp.exists(osp.join(folder_name, "data_notes.txt")):
         read_only_fnames = [osp.join(folder_name, "data_notes.txt")]
 
     notes = osp.join(folder_name, "notes.txt")
