@@ -125,56 +125,104 @@ def compile_latex(cwd, pdf_file, timeout=30):
     except FileNotFoundError:
         print("Failed to rename PDF.")
 
+sections = [
+    'Abstract', 'Key Messages', 'Introduction', 'Methods', 'Results', 'Discussion', 'Conclusions'
+]
 
 per_section_tips = {
     "Abstract": """
-- TL;DR of the paper
-- What are we trying to do and why is it relevant?
-- Why is this hard? 
-- How do we solve it (i.e. our contribution!)
-- How do we verify that we solved it (e.g. Experiments and results)
+The abstract should be no more than 250 words and consist of the following four sections:
+
+Background: Briefly describe the problem addressed and why it is important.
+
+Methods: Describe how the study was performed and include:
+
+the study type
+the study period
+the study location or setting
+the sample size.
+Results: Report the salient results, including the response rate and the main findings. Please include the estimates and confidence intervals for the main results if appropriate.
+
+Please state whether the results are for the main hypothesis or if there has been post hoc analysis or secondary use of data.
+
+Conclusions: Describe what conclusions can be drawn from the results.
 
 Please make sure the abstract reads smoothly and is well-motivated. This should be one continuous paragraph with no breaks between the lines.
+""",
+    "Key Messages": """
+    The key messages of the paper consists of 3 bullet points that succinctly describe:
+- What your research question was
+- What you found
+- Why it is important
+Each bullet point should be a single, complete sentence.
 """,
     "Introduction": """
 - Longer version of the Abstract, i.e. of the entire paper
 - What are we trying to do and why is it relevant?
+- describe the problem addressed and why it is important.
 - Why is this hard? 
 - How do we solve it (i.e. our contribution!)
 - How do we verify that we solved it (e.g. Experiments and results)
 - New trend: specifically list your contributions as bullet points
 - Extra space? Future work!
-""",
-    "Related Work": """
+
+Background:
+- Define the problem or knowledge gap.
+- Provide an epidemiological context, referencing global or regional statistics on the issue.
+- Review key existing studies, emphasizing the limitations or unresolved questions.
 - Academic siblings of our work, i.e. alternative attempts in literature at trying to solve the same problem. 
-- Goal is to “Compare and contrast” - how does their approach differ in either assumptions or method? If their method is applicable to our Problem Setting I expect a comparison in the experimental section. If not, there needs to be a clear statement why a given method is not applicable. 
+- Goal is to “Compare and contrast” - how does prior studies differ in cohort, outcomes of interest, results.
 - Note: Just describing what another paper is doing is not enough. We need to compare and contrast.
+Rationale:
+- Explain why this study is needed, including the population or subgroup that is the focus.
+- State how your study addresses gaps in the literature or builds on prior findings.
+Objective:
+- Clearly state the study objective(s) and any hypotheses being tested.
 """,
-    "Background": """
-- Academic Ancestors of our work, i.e. all concepts and prior work that are required for understanding our method. 
-- Usually includes a subsection, Problem Setting, which formally introduces the problem setting and notation (Formalism) for our method. Highlights any specific assumptions that are made that are unusual. 
-- Note: If our paper introduces a novel problem setting as part of its contributions, it's best to have a separate Section.
-""",
-    "Method": """
-- What we do. Why we do it. All described using the general Formalism introduced in the Problem Setting and building on top of the concepts / foundations introduced in Background.
-""",
-    "Experimental Setup": """
-- How do we test that our stuff works? Introduces a specific instantiation of the Problem Setting and specific implementation details of our Method for this Problem Setting.
-- Do not imagine unknown hardware details.
-- Includes a description of the dataset, evaluation metrics, important hyperparameters, and implementation details.
+    "Methods": """
+Study Design:
+- Specify the type of study (e.g., cohort, case-control, longitudinal).
+- Provide a brief justification of the design choice.
+Study Population:
+- Describe inclusion/exclusion criteria, recruitment methods, and any follow-up.
+- If relevant, describe cohort characteristics and participation rates.
+Exposure and Outcome Measures:
+- Define primary exposures, covariates, and outcomes.
+- Explain how these variables were measured (e.g., self-reports, medical records, lab tests).
+Statistical Analysis:
+- Specify statistical tests/models used (e.g., regression models, adjustment for confounders).
+- Explain how missing data were handled.
+- Describe any sensitivity analyses or subgroups examined.
+
 """,
     "Results": """
-- Shows the results of running Method on our problem described in Experimental Setup.
-- Includes statements on hyperparameters and other potential issues of fairness.
-- Only includes results that have actually been run and saved in the logs. Do not hallucinate results that don't exist.
-- If results exist: compares to baselines and includes statistics and confidence intervals. 
-- If results exist: includes ablation studies to show that specific parts of the method are relevant.
-- Discusses limitations of the method.
-- Make sure to include all the results from the experiments, and include all relevant figures.
+Descriptive Statistics:
+- Provide a summary of the study population characteristics (e.g., age, sex, comorbidities).
+- Present tables or figures illustrating key variables.
+Main Findings:
+- Report results of the main analyses, focusing on associations between exposures and outcomes.
+- Provide confidence intervals, p-values, and effect estimates.
+Sensitivity/Secondary Analyses:
+- Present results from additional analyses (e.g., stratified by demographics or risk factors).
+- Report findings from any tests for interaction or non-linearity.
+
+""",
+    "Discussion": """
+Principal Findings:
+- Summarize the most important results in relation to the study’s objective.
+- Compare findings to those from previous studies, highlighting consistencies or contradictions.
+Strengths and Limitations:
+- Discuss the methodological strengths (e.g., robust statistical analysis, large sample size).
+- Address study limitations (e.g., selection bias, measurement error, confounding).
+Implications for Epidemiology and Public Health:
+- State the broader public health implications of your findings.
+- Suggest potential policy or clinical practice changes.
+Future Research:
+- Propose areas for further research, building on your findings.
 """,
     "Conclusion": """
 - Brief recap of the entire paper.
-- To keep going with the analogy, you can think of future work as (potential) academic offspring.
+- Provide a concise summary of the study’s impact and relevance.
 """,
 }
 
@@ -218,7 +266,6 @@ Fix any remaining errors as before:
 # CITATION HELPERS
 citation_system_msg = """You are an ambitious AI PhD student who is looking to publish a paper that will contribute significantly to the field.
 You have already written an initial draft of the paper and now you are looking to add missing citations to related papers throughout the paper.
-The related work section already has some initial comments on which papers to add and discuss.
 
 Focus on completing the existing write-up and do not add entirely new elements unless necessary.
 Ensure every point in the paper is substantiated with sufficient evidence.
@@ -231,6 +278,7 @@ Make sure not to copy verbatim from prior literature to avoid plagiarism.
 
 You will be prompted to give a precise description of where and how to add the cite, and a search query for the paper to be cited.
 Finally, you will select the most relevant cite from the search results (top 10 results will be shown).
+References from the International Journal of Epidemiology, Journal of Clinical Epidemiology, or Lancet are strong references.
 You will have {total_rounds} rounds to add to the references, but do not need to use them all.
 
 DO NOT ADD A CITATION THAT ALREADY EXISTS!"""
@@ -418,14 +466,7 @@ Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these 
         .replace(r"{{", "{")
         .replace(r"}}", "}")
     )
-    for section in [
-        "Introduction",
-        "Background",
-        "Method",
-        "Experimental Setup",
-        "Results",
-        "Conclusion",
-    ]:
+    for section in [s for s in sections if s != "Abstract"]:
         section_prompt = f"""Please fill in the {section} of the writeup. Some tips are provided below:
 {per_section_tips[section]}
 
@@ -458,7 +499,8 @@ Do not modify `references.bib` to add any new citations, this will be filled in 
 
 Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these edits.
 """
-    coder_out = coder.run(section_prompt)
+    # don't run the "sketch the related work" edits
+    #coder_out = coder.run(section_prompt)
 
     # Fill paper with cites.
     for _ in range(num_cite_rounds):
@@ -490,16 +532,7 @@ Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these 
         """Great job! Now that there is a complete draft of the entire paper, let's refine each section again.
 First, re-think the Title if necessary. Keep this concise and descriptive of the paper's concept, but try by creative with it."""
     )
-    for section in [
-        "Abstract",
-        "Related Work",
-        "Introduction",
-        "Background",
-        "Method",
-        "Experimental Setup",
-        "Results",
-        "Conclusion",
-    ]:
+    for section in sections:
         coder_out = coder.run(
             second_refinement_prompt.format(
                 section=section, tips=per_section_tips[section]
