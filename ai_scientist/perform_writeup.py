@@ -650,11 +650,13 @@ if __name__ == "__main__":
         main_model = Model(model)
     coder = Coder.create(
         main_model=main_model,
-        fnames=fnames,
+        fnames=[writeup_file],
+        read_only_fnames=[exp_file, notes],
         io=io,
         stream=False,
         use_git=False,
         edit_format="diff",
+        max_reflections=6,
     )
     if args.no_writing:
         generate_latex(coder, args.folder, f"{args.folder}/test.pdf")
