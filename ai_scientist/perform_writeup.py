@@ -125,7 +125,7 @@ def compile_latex(cwd, pdf_file, timeout=30):
     except FileNotFoundError:
         print("Failed to rename PDF.")
 
-sections = [
+paper_sections = [
     'Abstract', 'Key Messages', 'Introduction', 'Methods', 'Results', 'Discussion', 'Conclusions'
 ]
 
@@ -459,6 +459,7 @@ Some tips are provided below:
 Before every paragraph, please include a brief description of what you plan to write in that paragraph in a comment.
 
 Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these edits.
+The SEARCH block for the first edit of the file should be the empty string "" because the file is empty.
 """
     coder_out = coder.run(abstract_prompt)
     coder_out = coder.run(
@@ -466,7 +467,9 @@ Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these 
         .replace(r"{{", "{")
         .replace(r"}}", "}")
     )
-    for section in [s for s in sections if s != "Abstract"]:
+    global paper_sections
+    # all sections except abstract
+    for section in paper_sections[1:]:
         section_prompt = f"""Please fill in the {section} of the writeup. Some tips are provided below:
 {per_section_tips[section]}
 
@@ -486,21 +489,6 @@ Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these 
             .replace(r"{{", "{")
             .replace(r"}}", "}")
         )
-
-    # SKETCH THE RELATED WORK
-    section_prompt = f"""Please fill in the Related Work of the writeup. Some tips are provided below:
-
-{per_section_tips["Related Work"]}
-
-For this section, very briefly sketch out the structure of the section, and clearly indicate what papers you intend to include.
-Do this all in LaTeX comments using %.
-The related work should be concise, only plan to discuss the most relevant work.
-Do not modify `references.bib` to add any new citations, this will be filled in at a later stage.
-
-Be sure to first name the file and use *SEARCH/REPLACE* blocks to perform these edits.
-"""
-    # don't run the "sketch the related work" edits
-    #coder_out = coder.run(section_prompt)
 
     # Fill paper with cites.
     for _ in range(num_cite_rounds):
